@@ -1,6 +1,5 @@
 package nl.vindh.fpinscala
 
-import com.sun.corba.se.impl.orbutil.DenseIntMapImpl
 import org.scalatest.{Assertion, FlatSpec, Matchers}
 
 class chapter3Test extends FlatSpec with Matchers{
