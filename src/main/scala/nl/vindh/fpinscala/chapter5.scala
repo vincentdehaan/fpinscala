@@ -61,7 +61,7 @@ sealed trait Stream[+A] {
     case Empty => None
     case LCons(hd, tl) => Some((f(hd()), tl()))
   }
-  
+
   def takeUf(n: Int): Stream[A] = Stream.unfold((this, n)){
     case (LCons(hd, tl), m) if m > 0 => Some((hd(), (tl(), m - 1)))
     case _ => None
