@@ -14,15 +14,20 @@ class chapter5Test extends FlatSpec with Matchers {
     assert(l === List(1, 2, 3))
   }
 
-  it should "implement take" in {
+  def takeTest(takeImpl: (Stream[Int], Int) => Stream[Int]): Assertion = {
     // Arrange
     val s = Stream(1, 2, 3, 4, 5)
 
     // Act
-    val t = s.take(3)
+    val t = takeImpl(s, 3)
 
     // Assert
     assert(t.toList === Stream(1, 2, 3).toList)
+  }
+
+  it should "implement take" in {
+    val takeImpl = (s: Stream[Int], i: Int) => s.take(i)
+    takeTest(takeImpl)
   }
 
   it should "implement drop" in {
@@ -87,7 +92,7 @@ class chapter5Test extends FlatSpec with Matchers {
     assert(n === None)
   }
 
-  def mapTest(mapImpl: (Stream[Int], Int => Int) => Stream[Int]): Assertion = {
+  def lazyMapTest(mapImpl: (Stream[Int], Int => Int) => Stream[Int], lazyAtFirstElt: Boolean): Assertion = {
     // Arrange
     val s = Stream(1, 2, 3, 4, 5)
     var sideEffect = false
@@ -100,7 +105,7 @@ class chapter5Test extends FlatSpec with Matchers {
     val t = mapImpl(s, f)
 
     // Assert
-    assert(sideEffect === false)
+    if(lazyAtFirstElt) assert(sideEffect === false)
 
     // Act
     t.nthElt(3)
@@ -112,7 +117,7 @@ class chapter5Test extends FlatSpec with Matchers {
 
   it should "implement map using foldRight" in {
     def mapImpl(s: Stream[Int], f: Int => Int): Stream[Int] = s.map(f)
-    mapTest(mapImpl)
+    lazyMapTest(mapImpl, true)
   }
 
   it should "implement filter using foldRight" in {
@@ -216,6 +221,78 @@ class chapter5Test extends FlatSpec with Matchers {
 
   it should "implement map using unfold" in {
     def mapImpl(s: Stream[Int], f: Int => Int): Stream[Int] = s.mapUf(f)
-    mapTest(mapImpl)
+    lazyMapTest(mapImpl, false)
+  }
+
+  it should "implement take using unfold" in {
+    def takeImpl = (s: Stream[Int], i: Int) => s.takeUf(i)
+    takeTest(takeImpl)
+  }
+
+  it should "implement takeWhile using unfold" in {
+    def takeWhileImpl = (s: Stream[Int], f: Int => Boolean) => s.takeWhile(f)
+    takeWhileTest(takeWhileImpl)
+  }
+
+  it should "implement zipWith using unfold" in {
+    // Arrange
+    val s1 = Stream(1, 2, 3, 4)
+    val s2 = Stream(5, 6, 7)
+
+    // Act
+    val z = s1.zipWith(s2)
+
+    // Assert
+    assert(z.toList === List((1, 5), (2, 6), (3, 7)))
+  }
+
+  it should "implement zipAll using unfold" in {
+    // Arrange
+    val s1 = Stream(1, 2, 3, 4)
+    val s2 = Stream(5, 6, 7)
+
+    // Act
+    val z = s1.zipAll(s2)
+
+    // Assert
+    assert(z.toList === List((Some(1), Some(5)), (Some(2), Some(6)), (Some(3), Some(7)), (Some(4), None)))
+  }
+
+  it should "implement startsWith" in {
+    // Arrange
+    val s1 = Stream(1, 2, 3)
+    val s2 = Stream(1, 2)
+    val s3 = Stream(1, 3)
+
+    // Act
+    val t = s1.startsWith(s2)
+    val f = s1.startsWith(s3)
+
+    // Assert
+    assert(t === true)
+    assert(f === false)
+  }
+
+  it should "implement tails" in {
+    // Arrange
+    val s = Stream(1, 2, 3)
+
+    // Act
+    val t = s.tails
+
+    // Assert
+    val tt = List.map(t.toList)(s => s.toList)
+    assert(tt === List(List(1, 2, 3), List(2, 3), List(3), List()))
+  }
+
+  it should "implement scanRight" in {
+    // Arrange
+    val s = Stream(1, 2, 3)
+
+    // Act
+    val sr = s.scanRight(0)(_ + _)
+
+    // Assert
+    assert(sr.toList === List(6, 5, 3, 0))
   }
 }

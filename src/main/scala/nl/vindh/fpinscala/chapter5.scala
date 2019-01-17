@@ -55,28 +55,49 @@ sealed trait Stream[+A] {
   def flatMap[B](f: A => Stream[B]): Stream[B] = foldRight(Empty: Stream[B])((a, b) => f(a).foldRight(b)((c, d) => Stream.cons(c, d)))
 
   // Exercise 5.13
-  // TODO: test!
-  def mapUf[B](f: A => B): Stream[B] = this match {
-    case Empty => Empty
-    case LCons(h, t) => Stream.unfold(t){
-      s => s() match {
-        case Empty => None
-        case LCons(hd, tl) => Some((f(hd()), tl))
-      }
-    }
+  // Note that the lazyness behaviour of map is a bit different from map using foldRight:
+  //   the first element is evaluated on evaluation.
+  def mapUf[B](f: A => B): Stream[B] = Stream.unfold(this){
+    case Empty => None
+    case LCons(hd, tl) => Some((f(hd()), tl()))
+  }
+  
+  def takeUf(n: Int): Stream[A] = Stream.unfold((this, n)){
+    case (LCons(hd, tl), m) if m > 0 => Some((hd(), (tl(), m - 1)))
+    case _ => None
   }
 
-  /*def takeUf(n: Int): Stream[A] = this match {
-    case Empty => Empty
-    case LCons(h, t) => Stream.unfold(n - 1)(s => if(s > 0) )
-  }*/
+  def takeWhileUf(p: A => Boolean): Stream[A] = Stream.unfold(this){
+    case LCons(hd, tl) if p(hd()) => Some(hd(), tl())
+    case _ => None
+  }
 
-  def takeWhileUf(p: A => Boolean): Stream[A] = ???
+  def zipWith[B](s: Stream[B]): Stream[(A, B)] = Stream.unfold((this, s)){
+    case (LCons(hdt, tlt), LCons(hds, tls)) => Some((hdt(), hds()), (tlt(), tls()))
+    case _ => None
+  }
 
-  def zipWith[B](s: Stream[B]): Stream[(A, B)] = ???
+  def zipAll[B](s: Stream[B]): Stream[(Option[A], Option[B])] = Stream.unfold((this, s)){
+    case (LCons(hdt, tlt), LCons(hds, tls)) => Some((Some(hdt()), Some(hds())), (tlt(), tls()))
+    case (LCons(hdt, tlt), Empty) => Some((Some(hdt()), None), (tlt(), Empty))
+    case (Empty, LCons(hds, tls)) => Some((None, Some(hds())), (Empty, tls()))
+    case _ => None
+  }
 
-  def zipAll[B](s2: Stream[B]): Stream[(Option[A], Option[B])] = ???
+  // Exercise 5.14
+  def startsWith[B](s: Stream[B]): Boolean =
+    this.zipWith(s).foldRight(true)((tup, prev) => (tup._1 == tup._2) && prev)
 
+  // Exercise 5.15
+  def tails: Stream[Stream[A]] = Stream.unfold((this, true)){
+    case (s @ LCons(_, tl), true) => Some((s, (tl(), true)))
+    case (Empty, true) => Some(Empty, (Empty, false))
+    case _ => None
+  }
+
+  // Exercise 5.16
+  def scanRight[B](z: => B)(f: (A, => B) => B): Stream[B] =
+    foldRight((z, Stream(z)))((a, b) => (f(a, b._1), Stream.cons(f(a, b._1), b._2)))._2
 }
 case object Empty extends Stream[Nothing]
 case class LCons[+A](h: () => A, t: () => Stream[A]) extends Stream[A] // I call this LCons to prevent confusion with chapter 3
@@ -110,8 +131,8 @@ object Stream {
 
   // Exercise 5.11
   // This function will be tested in exercise 5.12
-  def unfold[A, S](z: S)(f: S => Option[(A, S)]): Stream[A] = f(z) match {
-    case None => Stream.empty[A]
+  def unfold[AA, S](z: S)(f: S => Option[(AA, S)]): Stream[AA] = f(z) match {
+    case None => Stream.empty[AA]
     case Some((a, s)) => Stream.cons(a, unfold(s)(f))
   }
 
