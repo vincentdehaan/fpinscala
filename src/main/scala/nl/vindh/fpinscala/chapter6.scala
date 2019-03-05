@@ -49,8 +49,8 @@ object chapter6 {
 
   // Exercise 6.4
   def ints(count: Int)(rng: RNG): (List[Int], RNG) = {
-    (0 until count).foldLeft((List[Int](), rng)){
-      (tup, _) => {
+    (0 until count).foldRight((List[Int](), rng)){
+      (_, tup) => {
         val (i, nextRng) = tup._2.nextInt
         (Cons(i, tup._1), nextRng)
       }
@@ -81,4 +81,92 @@ object chapter6 {
       val (b, rng3) = rb(rng)
       (f(a, b), rng3)
     }
+
+  // Exercise 6.7
+  def sequence[A](fs: List[Rand[A]]): Rand[List[A]] = {
+    rng => List.foldRight(fs, (List[A](), rng)) {
+      (nw, acc) => (Cons(nw(acc._2)._1 , acc._1), nw(acc._2)._2)
+    }
+  }
+
+  // This is necessary because we did not implement fill in Chapter 3
+  def fillList[A](count: Int, el: A): List[A] = if(count > 0) Cons(el, fillList(count - 1, el)) else Nil
+
+  def intsSeq(count: Int): Rand[List[Int]] = sequence(fillList(count, nonNegativeInt _))
+
+  // Exercise 6.8
+  def flatMap[A, B](f: Rand[A])(g: A => Rand[B]): Rand[B] =
+    rng => {
+      val (a, rng2) = f(rng)
+      g(a)(rng2)
+    }
+
+  def nonNegativeLessThan(n: Int): Rand[Int] = flatMap(nonNegativeInt){
+    i => {
+      val mod = i % n
+      if(i + (n - 1) - mod >= 0) unit(mod) else nonNegativeLessThan(n)
+    }
+  }
+
+  // Exercise 6.9
+  // Verified against companion booklet
+  def mapFm[A, B](s: Rand[A])(f: A => B): Rand[B] =
+    flatMap(s)(a => unit(f(a)))
+
+  def map2Fm[A, B, C](ra: Rand[A], rb: Rand[B])(f: (A, B) => C): Rand[C] =
+    flatMap(ra)(a => mapFm(rb)(b => f(a, b)))
+
+  // Exercise 6.10
+  case class State[S, +A](run: S => (A, S)){
+    def flatMap[B](g: A => State[S, B]): State[S, B] =
+      State {
+        s => {
+          val (a, s2) = run(s)
+          g(a).run(s2)
+        }
+      }
+
+    def map[B](f: A => B): State[S, B] =
+      flatMap(a => State.unit(f(a)))
+
+    def map2[B, C](sb: State[S, B])(f: (A, B) => C): State[S, C] =
+      flatMap(a => sb.map(b => f(a, b)))
+  }
+
+  object State {
+    def unit[S, A](a: A): State[S, A] = State(s => (a, s))
+
+    def sequence[S, A](fs: List[State[S, A]]): State[S, List[A]] =
+      State {
+        s => List.foldRight(fs, (List[A](), s)) {
+          case (nw, (ls, s)) => (Cons(nw.run(s)._1, ls), nw.run(s)._2)
+        }
+      }
+
+    def modify[S](f: S => S): State[S, Unit] = for {
+      s <- get
+      _ <- set(f(s))
+    } yield()
+
+    def get[S]: State[S, S] = State(s => (s, s))
+
+    def set[S](s: S): State[S, Unit] = State(_ => ((), s))
+  }
+
+  // Exercise 6.11
+  // Thise one is still too hard for me! I looked at the answer, but I didn't fully understand it.
+  sealed trait Input
+  case object Coin extends Input
+  case object Turn extends Input
+
+  case class Machine(locked: Boolean, candies: Int, coins: Int)
+
+  object Candy {
+//    def simulateMachine(inputs: List[Input]): State[Machine, (Int, Int)] =
+//      for {
+//
+//        i <- inputs
+
+//      }
+  }
 }

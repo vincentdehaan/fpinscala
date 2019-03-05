@@ -8,6 +8,10 @@ class chapter6Test extends FlatSpec with Matchers {
     def nextInt: (Int, RNG) = (constant, this)
   }
 
+  case class PlusOneRng(seed: Int) extends RNG {
+    def nextInt: (Int, RNG) = (seed, PlusOneRng(seed + 1))
+  }
+
   "nonNegativeInt" should "generate a random non-negative integer" in {
     // Arrange
     val minRng = FakeRNG(Int.MinValue)
@@ -35,16 +39,13 @@ class chapter6Test extends FlatSpec with Matchers {
 
   "ints" should "generate a list of random integers" in {
     // Arrange
-    val rng = SimpleRNG(42)
+    val poRng = PlusOneRng(1)
 
     // Act
-    val (is, _) = ints(7)(rng)
+    val (is, _) = ints(7)(poRng)
 
     // Assert
-    assert(List.length(is) === 7)
-    // We assume that all elements of a small list of random integers are distinct and non-zero
-    val distinct = List.foldRight(is, (true, 0))((next, tup) => ((next != tup._2) && tup._1, next))._1
-    assert(distinct === true)
+    assert(is === List(7, 6, 5, 4, 3, 2, 1))
   }
 
   "doubleWithMap" should "generate a random double between 0 and 1" in {
@@ -56,5 +57,27 @@ class chapter6Test extends FlatSpec with Matchers {
 
     // Assert
     assert(d >= 0 && d < 1)
+  }
+
+  "intsSeq" should "generate a list of random integers" in {
+    // Arrange
+    val poRng = PlusOneRng(1)
+
+    // Act
+    val (is, _) = intsSeq(7)(poRng)
+
+    // Assert
+    assert(is === List(7, 6, 5, 4, 3, 2, 1))
+  }
+
+  "nonNegativeLessThan" should "generate non-negative integers less than n" in {
+    // Arrange
+    val poRng = PlusOneRng(1)
+
+    // Act
+    val (n, _) = nonNegativeLessThan(7)(poRng)
+
+    // Assert
+    assert(n === 1)
   }
 }
