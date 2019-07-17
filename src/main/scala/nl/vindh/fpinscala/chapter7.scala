@@ -85,8 +85,8 @@ object chapter7 extends App {
     // Exercise 7.12
     def choiceMap[K, V](key: Par[K])(choices: Map[K, Par[V]]): Par[V] =
       es => {
-        val key = run(es)(key).get
-        choices(key)(es)
+        val k = run(es)(key).get
+        choices(k)(es)
       }
 
     // Exercise 7.13

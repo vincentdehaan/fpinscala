@@ -1,5 +1,7 @@
 package nl.vindh.fpinscala
 
+import scala.collection.immutable.{List => ScalaList}
+
 trait RNG {
   def nextInt: (Int, RNG)
 }
@@ -86,6 +88,13 @@ object chapter6 {
   def sequence[A](fs: List[Rand[A]]): Rand[List[A]] = {
     rng => List.foldRight(fs, (List[A](), rng)) {
       (nw, acc) => (Cons(nw(acc._2)._1 , acc._1), nw(acc._2)._2)
+    }
+  }
+
+  // Necessary in chapter 8
+  def sequence[A](fs: ScalaList[Rand[A]]): Rand[ScalaList[A]] = {
+    rng => fs.foldRight((ScalaList[A](), rng)) {
+      (nw, acc) => (nw(acc._2)._1 :: acc._1, nw(acc._2)._2)
     }
   }
 
