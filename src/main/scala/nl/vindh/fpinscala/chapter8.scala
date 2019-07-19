@@ -37,8 +37,7 @@ object chapter8 {
     def listOfN(size: Gen[Int]): Gen[ScalaList[A]] =
       size.flatMap(n => Gen.listOfN(n, this))
 
-
-    // Exercise 9.10
+    // Exercise 8.10
     def unsized: SGen[A] = SGen(i => this)
   }
 
@@ -68,6 +67,14 @@ object chapter8 {
         val g1w = (g1._2 / total * 100).toInt
         choose(0, 100).flatMap(n => if(n < g1w) g1._1 else g2._1)
       }
+
+    // Exercise 8.12
+    def listOf[A](g: Gen[A]): SGen[ScalaList[A]] =
+      SGen(i => listOfN(i, g))
+
+    // Exercise 8.13
+    def listOf1[A](g: Gen[A]): SGen[ScalaList[A]] =
+      SGen(i => listOfN(i.min(1), g))
   }
 
   case class SGen[A](forSize: Int => Gen[A])
@@ -98,5 +105,17 @@ object chapter8 {
           case (f1: Falsified, f2: Falsified) => Falsified(f1.failure + ", " + f2.failure, f1.successes.min(f2.successes))
         }
       })
+  }
+
+  object Prop {
+    def forAll[A](g: SGen[A])(f: A => Boolean): Prop = ???
+  }
+
+  // Exercise 8.14
+  val sorted = Prop.forAll(Gen.listOf1(Gen.choose(0, 10))) {
+    lst => {
+      val sorted = lst.sorted
+      sorted.foldRight((true, -1)){case (nw, (acc, prev)) => if(prev < nw) (acc, nw) else (false, nw)}._1
+    }
   }
 }
