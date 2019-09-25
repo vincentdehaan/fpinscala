@@ -10,6 +10,7 @@ object chapter12 {
 
   trait Applicative[F[_]] extends Functor[F] {
     def map2[A, B, C](fa: F[A], fb: F[B])(f: (A, B) => C): F[C]
+
     def unit[A](a: => A): F[A]
 
     def map[A, B](fa: F[A])(f: A => B): F[B] =
@@ -50,6 +51,33 @@ object chapter12 {
 
       }
     }*/
+
+    // Exercise 12.9
+    def compose[G[_]](G: Applicative[G]) = {
+      val self = this
+      new Applicative[({type f[x] = F[G[x]]})#f] {
+        override def unit[A](a: => A): F[G[A]] = self.unit(G.unit(a))
+
+        override def map2[A, B, C](fa: F[G[A]], fb: F[G[B]])(f: (A, B) => C): F[G[C]] = {
+          val g: (G[A], G[B]) => G[C] = (ga, gb) => G.map2(ga, gb)(f)
+          self.map2(fa, fb)(g)
+        }
+      }
+    }
+
+    // Exercise 12.12
+    def sequenceMap[K, V](ofa: Map[K, F[V]]): F[Map[K, V]] =
+      ofa.foldRight(unit(Map[K, V]())){
+        case ((nwK, nwFV), accF) => map2(nwFV, accF)((nwV, acc) => acc + (nwK -> nwV))
+      }
+
+
+    trait Traverse[F[_]] {
+      def traverse[G[_]: Applicative, A, B](fa: F[A])(f: A => G[B]): G[F[B]] =
+        sequence(map(fa)(f))
+      def sequence[G[_]: Applicative, A](fga: F[G[A]]): G[F[A]] =
+        traverse(fga)(ga => ga)
+    }
   }
 
   // Exercise 12.5
