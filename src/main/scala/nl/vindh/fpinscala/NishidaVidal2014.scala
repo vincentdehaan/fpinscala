@@ -38,13 +38,23 @@ object NishidaVidal2014 {
     case (S(S(n)), k) => fibtail(S(n), Cont(k, n))
   }
 
-  def eval(c: Context, x: PeanoNumber): PeanoNumber =(c, x) match {
+  def eval(c: Context, x: PeanoNumber): PeanoNumber = (c, x) match {
     case (Id, x) => x
     case (Cont(k, x), w) => eval(k, add(w, fib1(x))) // There seems to be a typo in the paper
   }
 
+  // Some more rewriting
+  def fib2(n: PeanoNumber): PeanoNumber = fibtail2(n, Id)
+
+  @annotation.tailrec
+  def fibtail2(n: PeanoNumber, c: Context): PeanoNumber = n match {
+    case Z => eval(c, Z)
+    case S(Z) => eval(c, S(Z)) // There seems to be a typo in the paper
+    case S(S(n)) => fibtail2(S(n), Cont(c, n))
+  }
+
   def main(args: Array[String]): Unit = {
-    val f = fib1(S(S(S(S(S(S(S(Z)))))))) // fib(7) = 13
+    val f = fib2(S(S(S(S(S(S(S(Z)))))))) // fib(7) = 13
     println(f)
   }
 }
